@@ -6,18 +6,33 @@ void twowire::init_slave(uint8_t addr,ISR isr){
   TWCR_REG = (1<<TWEN) | (1<<TWEA) | (1<<TWIE);
 }
 
+uint8_t read(){
+  while(!(TWSR_REG & (1<<TWINT)));
+  return TWDR_REG;
+}
+
 void twowire::write(uint8_t dat){
   TWDR_REG = dat;
   TWCR_REG = (1<<TWEN) | (1<<TWINT);
   while (!(TWCR_REG&(1<<TWINT)));
 }
 
-void twowire::onrequest(){
-
+void twowire::onrecieve(int bytes){
+  for (int i=0; i<bytes; i++){
+    rxBuffer[rxBuffrIndx++] = read();
+  }
+  rxBuffrIndx = 0;
 }
 
-void twowire::onrecieve(){
+void twowire::onrequest(){
+  for (uint8_t i=0; i<rxBuffrIndx; i++){
+    write(rxBuffer[i]);
+  }
+  rxBuffrIndx=0;
+}
 
+void twowire::begin(){
+  init_slave(SLAVE_ADDR,isr);
 }
 
 void isr(void){
